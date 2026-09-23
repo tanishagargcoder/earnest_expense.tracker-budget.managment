@@ -22,21 +22,22 @@ export interface AuthResult {
 
 /** Categories every new account starts with. */
 export const DEFAULT_CATEGORIES: ReadonlyArray<{ name: string; color: string }> = [
-  { name: 'Food & Dining', color: '#F97316' },
-  { name: 'Transport', color: '#0EA5E9' },
-  { name: 'Shopping', color: '#EC4899' },
-  { name: 'Bills & Utilities', color: '#8B5CF6' },
-  { name: 'Entertainment', color: '#EAB308' },
-  { name: 'Health', color: '#10B981' },
-  { name: 'Education', color: '#6366F1' },
-  { name: 'Other', color: '#64748B' },
+  // Colour order validated for colour-vision deficiency (adjacent pairs stay distinguishable).
+  { name: 'Food & Dining', color: '#2A78D6' },
+  { name: 'Transport', color: '#EB6834' },
+  { name: 'Shopping', color: '#1BAF7A' },
+  { name: 'Bills & Utilities', color: '#EDA100' },
+  { name: 'Entertainment', color: '#E87BA4' },
+  { name: 'Health', color: '#008300' },
+  { name: 'Education', color: '#4A3AA7' },
+  { name: 'Other', color: '#E34948' },
 ];
 
 const USER_COLUMNS = `id, name, email, currency, created_at AS "createdAt"`;
 
 // Compared against when the e-mail is unknown, so login takes the same time
 // whether or not the account exists (prevents user enumeration by timing).
-const DUMMY_HASH = bcrypt.hashSync('dummy-password-for-timing', 10);
+const DUMMY_HASH = bcrypt.hashSync('dummy-password-for-timing', env.BCRYPT_ROUNDS);
 
 async function issueRefreshToken(
   db: Queryable,
