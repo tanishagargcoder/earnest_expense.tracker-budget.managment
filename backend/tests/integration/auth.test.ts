@@ -80,3 +80,27 @@ describe('auth', () => {
     await request(app).post('/api/auth/refresh').set('Cookie', user.cookie).expect(401);
   });
 });
+
+describe('demo accounts', () => {
+  it('creates a separate, pre-filled account per visitor', async () => {
+    const first = await request(app).post('/api/auth/demo').expect(201);
+    const second = await request(app).post('/api/auth/demo').expect(201);
+    expect(first.body.user.id).not.toBe(second.body.user.id);
+    expect(first.body.user.email).toMatch(/@demo\.spendwise\.local$/);
+    refreshCookie(first.headers['set-cookie']);
+
+    const auth = { Authorization: `Bearer ${first.body.accessToken}` };
+    const expenses = await request(app).get('/api/expenses').set(auth).expect(200);
+    expect(expenses.body.pagination.total).toBeGreaterThan(40);
+    const dashboard = await request(app).get('/api/dashboard').set(auth).expect(200);
+    expect(dashboard.body.data.totalBudget).toBeGreaterThan(0);
+  });
+
+  it('removes demo accounts older than a day', async () => {
+    const old = await request(app).post('/api/auth/demo').expect(201);
+    await pool.query(`UPDATE users SET created_at = now() - interval '2 days' WHERE id = $1`, [old.body.user.id]);
+    await request(app).post('/api/auth/demo').expect(201);
+    const { rowCount } = await pool.query('SELECT 1 FROM users WHERE id = $1', [old.body.user.id]);
+    expect(rowCount).toBe(0);
+  });
+});

@@ -26,6 +26,7 @@ A full-stack app for tracking expenses, setting monthly budgets per category and
 | Area | What you can do |
 | --- | --- |
 | **Authentication** | Register and log in. Short-lived JWT access tokens plus rotating refresh tokens in an httpOnly cookie, so sessions survive a page reload. Includes logout. |
+| **Demo mode** | *Explore with demo data* on the login page creates a private account pre-filled with 6 months of sample expenses and budgets, so reviewers can try every feature without signing up. Demo accounts are deleted after 24 hours. |
 | **Dashboard** | See the month's total spend, total budget, what's left, how many categories went over their limit, and the change from last month. Includes a category breakdown (donut chart), a 6-month trend, per-category budget progress and recent expenses. Any month can be selected. |
 | **Expenses** | Add, edit and delete expenses. Filter by **date range**, **category** and **min/max amount**, search descriptions, and sort by date or amount. Results are paginated and show the total of the filtered set. |
 | **Budgets** | Set, edit and delete **monthly limits per category**. Progress bars turn amber at 80% and red when over the limit. You can copy last month's budgets in one click. |
@@ -254,12 +255,13 @@ Page reload ──► POST /api/auth/refresh restores the session (persistent lo
 
 ## API reference
 
-All endpoints are prefixed with `/api`. Everything except `auth/register|login|refresh|logout` and `health` requires `Authorization: Bearer <token>`.
+All endpoints are prefixed with `/api`. Everything except `auth/register|login|demo|refresh|logout` and `health` requires `Authorization: Bearer <token>`.
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
 | `POST` | `/auth/register` | `{ name, email, password }` → `201 { user, accessToken }` and sets the refresh cookie |
 | `POST` | `/auth/login` | `{ email, password }` → `{ user, accessToken }` and sets the refresh cookie |
+| `POST` | `/auth/demo` | Creates a private demo account with sample data → `201 { user, accessToken }` and sets the refresh cookie |
 | `POST` | `/auth/refresh` | Uses the cookie → `{ user, accessToken }` and a rotated cookie |
 | `POST` | `/auth/logout` | Revokes the refresh token → `204` |
 | `GET` | `/auth/me` | Current user |

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { reportsApi } from '../api/endpoints';
 import { CategoryDonut } from '../components/charts/CategoryDonut';
 import { TotalsBarChart } from '../components/charts/TotalsBarChart';
-import { EmptyState, ErrorBanner, Spinner } from '../components/ui/Feedback';
+import { EmptyState, ErrorBanner, Skeleton } from '../components/ui/Feedback';
 import { Icon } from '../components/ui/Icon';
 import { StatCard } from '../components/ui/StatCard';
 import { useAsync } from '../hooks/useAsync';
@@ -94,15 +94,21 @@ export function ReportsPage() {
       </section>
 
       {error && <ErrorBanner message={error} onRetry={reload} />}
-      {loading && !report && <Spinner />}
+      {loading && !report && (
+        <>
+          <Skeleton variant="stats" />
+          <Skeleton variant="cards" />
+        </>
+      )}
 
       {report && (
         <div className={loading ? 'is-refreshing' : undefined}>
           <section className="stats-grid" aria-label={`${report.label} summary`}>
-            <StatCard label="Total spent" value={formatCurrency(report.total, currency)} hint={report.label} />
-            <StatCard label="Expenses" value={String(report.expenseCount)} />
-            <StatCard label="Average per day" value={formatCurrency(report.averagePerDay, currency)} />
+            <StatCard featured icon="wallet" label="Total spent" value={formatCurrency(report.total, currency)} hint={report.label} />
+            <StatCard icon="receipt" label="Expenses" value={String(report.expenseCount)} />
+            <StatCard icon="trendUp" label="Average per day" value={formatCurrency(report.averagePerDay, currency)} />
             <StatCard
+              icon="target"
               label="Budget"
               value={report.totalBudget ? formatCurrency(report.totalBudget, currency) : 'Not set'}
               hint={report.totalBudget ? `${Math.round((report.total / report.totalBudget) * 100)}% used` : undefined}

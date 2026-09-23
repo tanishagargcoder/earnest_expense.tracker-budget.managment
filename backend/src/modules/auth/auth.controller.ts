@@ -23,6 +23,10 @@ export async function register(req: Request, res: Response) {
   sendAuth(res, 201, await authService.register(res.locals.body, req.get('user-agent')));
 }
 
+export async function demo(req: Request, res: Response) {
+  sendAuth(res, 201, await authService.createDemo(req.get('user-agent')));
+}
+
 export async function login(req: Request, res: Response) {
   sendAuth(res, 200, await authService.login(res.locals.body, req.get('user-agent')));
 }

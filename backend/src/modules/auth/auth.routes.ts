@@ -20,6 +20,7 @@ export const authRouter = Router();
 
 authRouter.post('/register', credentialLimiter, validate(registerSchema), controller.register);
 authRouter.post('/login', credentialLimiter, validate(loginSchema), controller.login);
+authRouter.post('/demo', credentialLimiter, controller.demo);
 authRouter.post('/refresh', controller.refresh);
 authRouter.post('/logout', controller.logout);
 authRouter.get('/me', requireAuth, controller.me);

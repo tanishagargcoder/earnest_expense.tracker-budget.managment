@@ -27,6 +27,7 @@ export const authApi = {
     api.post<AuthResponse>('/auth/login', { email, password }, { skipAuthRefresh: true }).then((r) => r.data),
   register: (name: string, email: string, password: string) =>
     api.post<AuthResponse>('/auth/register', { name, email, password }, { skipAuthRefresh: true }).then((r) => r.data),
+  demo: () => api.post<AuthResponse>('/auth/demo', undefined, { skipAuthRefresh: true }).then((r) => r.data),
   logout: () => api.post('/auth/logout', undefined, { skipAuthRefresh: true }),
   me: () => api.get<{ user: User }>('/auth/me').then((r) => r.data.user),
 };

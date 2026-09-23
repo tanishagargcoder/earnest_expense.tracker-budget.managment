@@ -31,3 +31,32 @@ export function EmptyState({ title, text, action }: { title: string; text?: stri
     </div>
   );
 }
+
+/** Placeholder blocks shown while the first load of a page is in flight. */
+export function Skeleton({ variant }: { variant: 'stats' | 'cards' | 'rows' }) {
+  if (variant === 'stats') {
+    return (
+      <div className="stats-grid" aria-hidden="true">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="skeleton skeleton--stat" />
+        ))}
+      </div>
+    );
+  }
+  if (variant === 'cards') {
+    return (
+      <div className="dashboard-grid" aria-hidden="true">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="skeleton skeleton--card" />
+        ))}
+      </div>
+    );
+  }
+  return (
+    <div className="skeleton-rows" aria-hidden="true">
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="skeleton skeleton--row" />
+      ))}
+    </div>
+  );
+}

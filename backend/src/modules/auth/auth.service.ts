@@ -1,10 +1,12 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
+import type { PoolClient } from 'pg';
 import { env } from '../../config/env.js';
 import { pool, withTransaction, type Queryable } from '../../db/pool.js';
 import { AppError } from '../../utils/AppError.js';
 import { generateRefreshToken, hashToken, signAccessToken } from '../../utils/tokens.js';
 import type { LoginInput, RegisterInput } from './auth.schemas.js';
+import { insertDemoData } from './demo.data.js';
 
 export interface PublicUser {
   id: string;
@@ -55,23 +57,57 @@ async function issueRefreshToken(
   return { id: rows[0].id, token };
 }
 
+/** Inserts a user with the default categories, inside an open transaction. */
+async function createUserWithDefaults(
+  client: PoolClient,
+  name: string,
+  email: string,
+  passwordHash: string,
+): Promise<PublicUser> {
+  const { rows } = await client.query<PublicUser>(
+    `INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING ${USER_COLUMNS}`,
+    [name, email, passwordHash],
+  );
+  await client.query(
+    `INSERT INTO categories (user_id, name, color)
+     SELECT $1, c.name, c.color FROM jsonb_to_recordset($2::jsonb) AS c(name text, color text)`,
+    [rows[0].id, JSON.stringify(DEFAULT_CATEGORIES)],
+  );
+  return rows[0];
+}
+
 export async function register(input: RegisterInput, userAgent?: string): Promise<AuthResult> {
   const passwordHash = await bcrypt.hash(input.password, env.BCRYPT_ROUNDS);
 
   // User, default categories and the first session are created atomically.
   return withTransaction(async (client) => {
-    const { rows } = await client.query<PublicUser>(
-      `INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING ${USER_COLUMNS}`,
-      [input.name, input.email, passwordHash],
-    );
-    const user = rows[0];
+    const user = await createUserWithDefaults(client, input.name, input.email, passwordHash);
+    const refresh = await issueRefreshToken(client, user.id, crypto.randomUUID(), userAgent);
+    return { user, accessToken: signAccessToken(user.id), refreshToken: refresh.token };
+  });
+}
 
+export const DEMO_EMAIL_DOMAIN = 'demo.spendwise.local';
+const DEMO_LIFETIME_HOURS = 24;
+
+/**
+ * Creates a throw-away account pre-filled with six months of sample data so
+ * visitors can explore the app without registering. Each visitor gets their
+ * own account (no shared state), and demo accounts older than a day are
+ * removed whenever a new one is created.
+ */
+export async function createDemo(userAgent?: string): Promise<AuthResult> {
+  const email = `demo-${crypto.randomBytes(6).toString('hex')}@${DEMO_EMAIL_DOMAIN}`;
+  // Random unguessable password: demo accounts can only be entered via this endpoint.
+  const passwordHash = await bcrypt.hash(crypto.randomBytes(24).toString('base64url'), 4);
+
+  return withTransaction(async (client) => {
     await client.query(
-      `INSERT INTO categories (user_id, name, color)
-       SELECT $1, c.name, c.color FROM jsonb_to_recordset($2::jsonb) AS c(name text, color text)`,
-      [user.id, JSON.stringify(DEFAULT_CATEGORIES)],
+      `DELETE FROM users WHERE email LIKE $1 AND created_at < now() - make_interval(hours => $2)`,
+      [`%@${DEMO_EMAIL_DOMAIN}`, DEMO_LIFETIME_HOURS],
     );
-
+    const user = await createUserWithDefaults(client, 'Demo User', email, passwordHash);
+    await insertDemoData(client, user.id);
     const refresh = await issueRefreshToken(client, user.id, crypto.randomUUID(), userAgent);
     return { user, accessToken: signAccessToken(user.id), refreshToken: refresh.token };
   });

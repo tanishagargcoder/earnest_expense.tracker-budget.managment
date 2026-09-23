@@ -4,7 +4,7 @@ import { dashboardApi } from '../api/endpoints';
 import { CategoryDonut } from '../components/charts/CategoryDonut';
 import { TotalsBarChart } from '../components/charts/TotalsBarChart';
 import { ExpenseList } from '../components/expenses/ExpenseList';
-import { EmptyState, ErrorBanner, Spinner } from '../components/ui/Feedback';
+import { EmptyState, ErrorBanner, Skeleton } from '../components/ui/Feedback';
 import { MonthPicker } from '../components/ui/MonthPicker';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { StatCard } from '../components/ui/StatCard';
@@ -22,24 +22,35 @@ export function DashboardPage() {
 
   const change = data ? percentChange(data.totalSpent, data.previousMonthSpent) : null;
   const firstName = user?.name.split(' ')[0];
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
   return (
     <div className="page">
       <header className="page__header">
         <div>
-          <h1>Hi, {firstName}</h1>
+          <h1>
+            {greeting}, {firstName}
+          </h1>
           <p className="page__subtitle">Here's your financial overview for {formatMonth(month)}.</p>
         </div>
         <MonthPicker value={month} onChange={setMonth} />
       </header>
 
       {error && <ErrorBanner message={error} onRetry={reload} />}
-      {loading && !data && <Spinner />}
+      {loading && !data && (
+        <>
+          <Skeleton variant="stats" />
+          <Skeleton variant="cards" />
+        </>
+      )}
 
       {data && (
         <div className={loading ? 'is-refreshing' : undefined}>
           <section className="stats-grid" aria-label="Summary">
             <StatCard
+              featured
+              icon="wallet"
               label="Total spent"
               value={formatCurrency(data.totalSpent, currency)}
               hint={
@@ -47,14 +58,15 @@ export function DashboardPage() {
                   ? `${data.expenseCount} expenses`
                   : `${change > 0 ? '▲' : '▼'} ${Math.abs(change)}% vs last month`
               }
-              tone={change !== null && change > 0 ? 'negative' : 'default'}
             />
             <StatCard
+              icon="target"
               label="Monthly budget"
               value={data.totalBudget > 0 ? formatCurrency(data.totalBudget, currency) : 'Not set'}
               hint={data.totalBudget > 0 ? `${data.budgetUsedPercent}% used` : <Link to="/budgets">Set a budget →</Link>}
             />
             <StatCard
+              icon="shield"
               label={data.remainingBudget < 0 ? 'Over budget' : 'Remaining budget'}
               value={formatCurrency(Math.abs(data.remainingBudget), currency)}
               tone={data.remainingBudget < 0 ? 'negative' : 'positive'}
@@ -64,7 +76,7 @@ export function DashboardPage() {
                   : 'All categories within limit'
               }
             />
-            <StatCard label="Transactions" value={String(data.expenseCount)} hint={`in ${formatMonth(month)}`} />
+            <StatCard icon="receipt" label="Transactions" value={String(data.expenseCount)} hint={`in ${formatMonth(month)}`} />
           </section>
 
           <div className="dashboard-grid">

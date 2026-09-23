@@ -1,11 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { expensesApi } from '../api/endpoints';
 import { ExpenseFilters } from '../components/expenses/ExpenseFilters';
 import { ExpenseForm } from '../components/expenses/ExpenseForm';
 import { ExpenseList } from '../components/expenses/ExpenseList';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
-import { EmptyState, ErrorBanner, Spinner } from '../components/ui/Feedback';
+import { EmptyState, ErrorBanner, Skeleton } from '../components/ui/Feedback';
 import { Icon } from '../components/ui/Icon';
 import { Modal } from '../components/ui/Modal';
 import { useAsync } from '../hooks/useAsync';
@@ -36,6 +36,11 @@ export function ExpensesPage() {
 
   const [editor, setEditor] = useState<Editor>(() => (searchParams.get('new') ? { mode: 'create' } : null));
   const [toDelete, setToDelete] = useState<Expense | null>(null);
+
+  // The mobile quick-add button links to /expenses?new=1.
+  useEffect(() => {
+    if (searchParams.get('new')) setEditor({ mode: 'create' });
+  }, [searchParams]);
 
   const updateFilters = useCallback((patch: Partial<Filters>) => {
     // Any filter change starts again from the first page.
@@ -97,7 +102,7 @@ export function ExpensesPage() {
 
       <section className="card card--flush">
         {loading && !data ? (
-          <Spinner />
+          <Skeleton variant="rows" />
         ) : data && data.data.length > 0 ? (
           <div className={loading ? 'is-refreshing' : undefined}>
             <ExpenseList

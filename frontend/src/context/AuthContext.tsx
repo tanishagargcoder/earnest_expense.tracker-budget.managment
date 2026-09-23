@@ -10,6 +10,8 @@ export interface AuthContextValue {
   status: AuthStatus;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
+  /** Signs in to a fresh account pre-filled with sample data. */
+  startDemo: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -58,6 +60,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [applySession],
   );
 
+  const startDemo = useCallback(async () => applySession(await authApi.demo()), [applySession]);
+
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
@@ -66,7 +70,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [clearSession]);
 
-  const value = useMemo(() => ({ user, status, login, register, logout }), [user, status, login, register, logout]);
+  const value = useMemo(
+    () => ({ user, status, login, register, startDemo, logout }),
+    [user, status, login, register, startDemo, logout],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

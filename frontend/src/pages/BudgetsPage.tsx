@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { budgetsApi } from '../api/endpoints';
 import { BudgetForm } from '../components/budgets/BudgetForm';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
-import { EmptyState, ErrorBanner, Spinner } from '../components/ui/Feedback';
+import { EmptyState, ErrorBanner, Skeleton } from '../components/ui/Feedback';
 import { Icon } from '../components/ui/Icon';
 import { Modal } from '../components/ui/Modal';
 import { MonthPicker } from '../components/ui/MonthPicker';
@@ -94,9 +94,10 @@ export function BudgetsPage() {
       {error && <ErrorBanner message={error} onRetry={reload} />}
 
       <section className="stats-grid stats-grid--3" aria-label="Budget totals">
-        <StatCard label="Total limit" value={formatCurrency(totals.limit, currency)} />
-        <StatCard label="Spent in budgeted categories" value={formatCurrency(totals.spent, currency)} />
+        <StatCard featured icon="target" label="Total limit" value={formatCurrency(totals.limit, currency)} />
+        <StatCard icon="wallet" label="Spent in budgeted categories" value={formatCurrency(totals.spent, currency)} />
         <StatCard
+          icon="shield"
           label={totals.remaining < 0 ? 'Over budget' : 'Remaining'}
           value={formatCurrency(Math.abs(totals.remaining), currency)}
           tone={totals.remaining < 0 ? 'negative' : 'positive'}
@@ -113,7 +114,7 @@ export function BudgetsPage() {
       </div>
 
       {loading && !budgets ? (
-        <Spinner />
+        <Skeleton variant="rows" />
       ) : budgets && budgets.length > 0 ? (
         <ul className={`budget-grid${loading ? ' is-refreshing' : ''}`}>
           {budgets.map((b) => (

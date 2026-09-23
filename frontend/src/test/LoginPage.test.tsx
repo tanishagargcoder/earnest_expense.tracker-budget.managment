@@ -12,6 +12,7 @@ function renderLogin(auth: Partial<AuthContextValue>) {
     status: 'unauthenticated',
     login: vi.fn(),
     register: vi.fn(),
+    startDemo: vi.fn(),
     logout: vi.fn(),
     ...auth,
   };
@@ -57,6 +58,15 @@ describe('<LoginPage />', () => {
     await userEvent.type(screen.getByLabelText('Password'), 'wrong');
     await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Invalid email or password');
+  });
+});
+
+describe('demo access', () => {
+  it('starts a demo session and opens the dashboard', async () => {
+    const auth = renderLogin({ startDemo: vi.fn().mockResolvedValue(undefined) });
+    await userEvent.click(screen.getByRole('button', { name: /explore with demo data/i }));
+    expect(auth.startDemo).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText('Dashboard home')).toBeInTheDocument();
   });
 });
 

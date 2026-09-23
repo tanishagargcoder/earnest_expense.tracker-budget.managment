@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Spinner } from '../ui/Feedback';
 import { Icon, type IconName } from '../ui/Icon';
@@ -14,6 +14,8 @@ const NAV: { to: string; label: string; icon: IconName }[] = [
 
 export function AppLayout() {
   const { user, logout } = useAuth();
+  const location = useLocation();
+  const isDemo = user?.email.endsWith('@demo.spendwise.local');
   const initials = user?.name
     .split(' ')
     .map((part) => part[0])
@@ -64,10 +66,26 @@ export function AppLayout() {
         </button>
       </header>
       <main className="main">
+        {isDemo && (
+          <div className="demo-banner" role="note">
+            <Icon name="sparkle" size={18} />
+            <span>
+              You're exploring a <strong>demo account</strong> with sample data. It's deleted after 24 hours.
+            </span>
+            <button type="button" className="link demo-banner__action" onClick={() => void logout()}>
+              Create your own account
+            </button>
+          </div>
+        )}
         <Suspense fallback={<Spinner />}>
           <Outlet />
         </Suspense>
       </main>
+      {location.pathname !== '/expenses' && (
+        <Link to="/expenses?new=1" className="fab" aria-label="Add expense">
+          <Icon name="plus" size={24} />
+        </Link>
+      )}
     </div>
   );
 }
