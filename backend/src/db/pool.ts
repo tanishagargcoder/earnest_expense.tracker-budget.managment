@@ -12,7 +12,8 @@ pg.types.setTypeParser(pg.types.builtins.INT8, (value) => Number(value));
 export const pool = new pg.Pool({
   connectionString: env.DATABASE_URL,
   ssl: env.DATABASE_SSL ? { rejectUnauthorized: false } : undefined,
-  max: 10,
+  // Serverless instances each get their own pool, so keep them small there.
+  max: process.env.VERCEL ? 3 : 10,
   idleTimeoutMillis: 30_000,
 });
 

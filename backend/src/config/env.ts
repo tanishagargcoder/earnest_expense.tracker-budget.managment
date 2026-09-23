@@ -18,7 +18,8 @@ const envSchema = z.object({
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(7),
   COOKIE_SAMESITE: z.enum(['lax', 'strict', 'none']).default('lax'),
-  COOKIE_SECURE: booleanString,
+  // Defaults to true in production / on Vercel (HTTPS), false locally.
+  COOKIE_SECURE: z.enum(['true', 'false']).optional(),
   BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(12),
 });
 
@@ -35,6 +36,10 @@ export const env = {
   corsOrigins: parsed.data.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean),
   isProduction: parsed.data.NODE_ENV === 'production',
   isTest: parsed.data.NODE_ENV === 'test',
+  COOKIE_SECURE:
+    parsed.data.COOKIE_SECURE !== undefined
+      ? parsed.data.COOKIE_SECURE === 'true'
+      : parsed.data.NODE_ENV === 'production' || Boolean(process.env.VERCEL),
 };
 
 export type Env = typeof env;

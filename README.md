@@ -138,6 +138,8 @@ A GitHub Actions workflow (`.github/workflows/ci.yml`) runs type checks, both te
 │       ├── types/                 # Shared TypeScript interfaces
 │       ├── utils/                 # Formatting, error helpers, file download
 │       └── test/
+├── api/index.js                   # Vercel serverless entry for the API
+├── vercel.json                    # One-project Vercel deployment
 ├── docker-compose.yml
 └── .github/workflows/ci.yml
 ```
@@ -304,7 +306,8 @@ All endpoints are prefixed with `/api`. Everything except `auth/register|login|r
 | `JWT_ACCESS_EXPIRES_IN` | `15m` | Access-token lifetime |
 | `REFRESH_TOKEN_TTL_DAYS` | `7` | Refresh-token lifetime |
 | `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated list of allowed frontend origins |
-| `COOKIE_SAMESITE` / `COOKIE_SECURE` | `lax` / `false` | Use `none` / `true` when frontend and API are on different domains |
+| `COOKIE_SAMESITE` | `lax` | Use `none` when frontend and API are on different domains |
+| `COOKIE_SECURE` | `true` in production / on Vercel, `false` locally | Sends the refresh cookie only over HTTPS |
 | `PORT` | `4000` | |
 | `BCRYPT_ROUNDS` | `12` | |
 
@@ -312,19 +315,29 @@ All endpoints are prefixed with `/api`. Everything except `auth/register|login|r
 
 ---
 
-## Deployment
+## Deployment (Vercel)
 
-The app deploys as three pieces: a managed PostgreSQL database, the API on a Node host, and the static frontend.
+The repository deploys to Vercel as **one project**. The React app is served as static files, and the Express API runs as a serverless function under `/api` on the same domain. Because both share one origin, the refresh cookie works without any CORS or third-party-cookie setup. The configuration is in [`vercel.json`](vercel.json) and [`api/index.js`](api/index.js).
 
-1. **Database:** create a PostgreSQL instance (Render, Neon, Supabase, Railway…) and copy its connection string.
-2. **API** (e.g. a Render *Web Service* with root directory `backend`):
-   - Build command: `npm ci && npm run build`
-   - Start command: `npm start` (migrations run automatically on startup)
-   - Environment: `NODE_ENV=production`, `DATABASE_URL`, `DATABASE_SSL=true`, a random `JWT_ACCESS_SECRET` (e.g. `openssl rand -hex 64`), `CORS_ORIGINS=https://<your-frontend-domain>`, `COOKIE_SAMESITE=none`, `COOKIE_SECURE=true`
-3. **Frontend** (e.g. Vercel or Netlify with root directory `frontend`):
-   - Build command: `npm run build`, output directory `dist`
-   - Environment: `VITE_API_URL=https://<your-api-domain>/api`
-   - `vercel.json` already rewrites all routes to `index.html` for client-side routing.
+1. **Import the repo:** in Vercel, choose *Add New → Project*, import this GitHub repository and keep the root directory as `/`. The framework preset can stay *Other*, because `vercel.json` sets the install, build and output settings.
+2. **Add a PostgreSQL database:** in the project, open *Storage → Create Database → Neon (Postgres)* and connect it to the project. This sets `DATABASE_URL` automatically. Any hosted PostgreSQL works; you then add its URL yourself.
+3. **Set environment variables** (*Settings → Environment Variables*):
+
+   | Name | Value |
+   | --- | --- |
+   | `DATABASE_URL` | Set by the Neon integration (or your own connection string) |
+   | `DATABASE_SSL` | `true` |
+   | `JWT_ACCESS_SECRET` | A long random string, e.g. the output of `openssl rand -hex 64` |
+
+4. **Deploy.** Migrations run automatically on the API's first request, and a Postgres advisory lock makes that safe when several instances start at once.
+5. **(Optional) Demo data:** to create the demo account on the hosted database, run this from your machine:
+   ```bash
+   cd backend && DATABASE_URL="<your Neon URL>" DATABASE_SSL=true npm run seed
+   ```
+
+To test the production build locally: `npx vercel build`.
+
+**Other hosts:** the API is a normal Express server (`npm run build && npm start` in `backend`). If you host it separately from the frontend, set `VITE_API_URL` on the frontend, add the frontend's URL to `CORS_ORIGINS`, and set `COOKIE_SAMESITE=none`.
 
 ---
 

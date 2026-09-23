@@ -3,6 +3,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pool, withTransaction } from './pool.js';
 
+const MIGRATION_LOCK_ID = 7_310_001;
+
 const migrationsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'migrations');
 
 /** Applies every migration in ./migrations that has not been applied yet, in filename order. */
@@ -14,18 +16,20 @@ export async function runMigrations(log: (msg: string) => void = console.log): P
     )`);
 
   const files = (await readdir(migrationsDir)).filter((f) => f.endsWith('.sql')).sort();
-  const { rows } = await pool.query<{ name: string }>('SELECT name FROM schema_migrations');
-  const applied = new Set(rows.map((r) => r.name));
 
   for (const file of files) {
-    if (applied.has(file)) continue;
-    const sql = await readFile(path.join(migrationsDir, file), 'utf8');
-    // Each migration runs atomically together with its bookkeeping row.
-    await withTransaction(async (client) => {
-      await client.query(sql);
+    // Each migration runs atomically together with its bookkeeping row. The
+    // transaction-scoped advisory lock stops parallel instances (e.g. several
+    // serverless cold starts) from applying the same migration twice.
+    const applied = await withTransaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock($1)', [MIGRATION_LOCK_ID]);
+      const done = await client.query('SELECT 1 FROM schema_migrations WHERE name = $1', [file]);
+      if (done.rowCount) return false;
+      await client.query(await readFile(path.join(migrationsDir, file), 'utf8'));
       await client.query('INSERT INTO schema_migrations (name) VALUES ($1)', [file]);
+      return true;
     });
-    log(`Applied migration ${file}`);
+    if (applied) log(`Applied migration ${file}`);
   }
 }
 

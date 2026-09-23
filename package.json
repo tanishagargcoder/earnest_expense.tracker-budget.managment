@@ -1,0 +1,9 @@
+{
+  "name": "expense-tracker",
+  "private": true,
+  "type": "module",
+  "description": "Root package used by the Vercel deployment (frontend + API in one project)",
+  "engines": {
+    "node": ">=20"
+  }
+}
